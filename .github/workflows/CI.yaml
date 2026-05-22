@@ -53,33 +53,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: arn:aws:iam::631969445205:role/github-action-role
-          role-session-name: offsets-db-audit-role-session
-          aws-region: ${{ env.AWS_DEFAULT_REGION }}
-
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.9.5
         with:
           cache: true
           cache-write: false
 
-      - name: Resolve latest S3 data date
-        run: |
-          LATEST=$(aws s3 ls s3://carbonplan-offsets-db/raw/ | awk '{print $2}' | sort | tail -1 | tr -d '/')
-          if [[ -z "$LATEST" ]]; then
-            echo "ERROR: no dated prefixes found under s3://carbonplan-offsets-db/raw/"
-            exit 1
-          fi
-          echo "S3_DATA_DIR=s3://carbonplan-offsets-db/raw/$LATEST" >> "$GITHUB_ENV"
-
       - name: Run mapping coverage audit
         run: |
-          OUTPUT=$(pixi run audit --data-dir "$S3_DATA_DIR" 2>/dev/null || true)
+          OUTPUT=$(pixi run audit 2>/dev/null || true)
           echo "$OUTPUT"
-          printf '## Mapping Coverage Audit\n\n**Data:** `%s`\n\n```\n%s\n```\n' "$S3_DATA_DIR" "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+          printf '## Mapping Coverage Audit\n\n**Data:** `tests/data/`\n\n```\n%s\n```\n' "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
           echo "$OUTPUT" > audit-report.txt
 
       - name: Upload audit report
